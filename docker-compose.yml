@@ -1,0 +1,79 @@
+services:
+  # Serviço do PHP-FPM para rodar o Laravel
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: laravel_app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./app:/var/www/html
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=laravel
+      - DB_USERNAME=user_laravel
+      - DB_PASSWORD=password_laravel
+    networks:
+      - laravel_network
+
+  # Serviço Nginx para servir a aplicação Laravel
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./app:/var/www/html
+      - ./nginx:/etc/nginx/conf.d
+    depends_on:
+      - app
+    networks:
+      - laravel_network
+
+  # Banco de dados MySQL
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: password_laravel
+      MYSQL_DATABASE: laravel
+      MYSQL_USER: user_laravel
+      MYSQL_PASSWORD: password_laravel
+    ports:
+      - "3306:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+    networks:
+      - laravel_network
+
+  # Interface do PHPMyAdmin
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin_
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql
+      # Nome de usuário do banco que o PhpMyAdmin utilizará para se conectar.
+      PMA_USER: user_laravel
+      # Senha do usuário do banco de dados para o acesso via PhpMyAdmin.
+      PMA_PASSWORD: password_laravel
+      MYSQL_ROOT_PASSWORD: password_laravel
+    ports:
+      - "8081:80"
+    depends_on:
+      - mysql
+    networks:
+      - laravel_network
+
+# Rede personalizada
+networks:
+  laravel_network:
+    driver: bridge
+
+# Volume para armazenar dados do banco de dados
+volumes:
+  dbdata:
